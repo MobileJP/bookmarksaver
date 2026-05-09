@@ -1,17 +1,20 @@
-const { createClient } = require('@supabase/supabase-js')
-
-function getSupabase() {
-  return createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_KEY
-  )
-}
+const SUPABASE_URL = process.env.SUPABASE_URL
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY
 
 function corsHeaders() {
   return {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Headers': 'Content-Type',
     'Content-Type': 'application/json',
+  }
+}
+
+function supabaseHeaders() {
+  return {
+    'apikey': SUPABASE_KEY,
+    'Authorization': `Bearer ${SUPABASE_KEY}`,
+    'Content-Type': 'application/json',
+    'Prefer': 'return=representation',
   }
 }
 
@@ -20,40 +23,38 @@ exports.handler = async (event) => {
     return { statusCode: 204, headers: corsHeaders(), body: '' }
   }
 
-  const supabase = getSupabase()
-
   // GET — list/search items
   if (event.httpMethod === 'GET') {
     const params = event.queryStringParameters || {}
     const { search, tags, category, limit = '50', offset = '0' } = params
 
-    let query = supabase
-      .from('items')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .range(Number(offset), Number(offset) + Number(limit) - 1)
-
-    if (search && search.trim()) {
-      const s = search.trim()
-      query = query.or(
-        `title.ilike.%${s}%,description.ilike.%${s}%,url.ilike.%${s}%,notes.ilike.%${s}%`
-      )
-    }
+    const queryParams = new URLSearchParams()
+    queryParams.set('order', 'created_at.desc')
+    queryParams.set('limit', limit)
+    queryParams.set('offset', offset)
 
     if (category && category !== 'all') {
-      query = query.eq('category', category)
+      queryParams.set('category', `eq.${category}`)
     }
 
     if (tags) {
       const tagList = tags.split(',').map((t) => t.trim()).filter(Boolean)
-      if (tagList.length) query = query.overlaps('tags', tagList)
+      if (tagList.length) {
+        queryParams.set('tags', `cs.{${tagList.join(',')}}`)
+      }
     }
 
-    const { data, error } = await query
-
-    if (error) {
-      return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify({ error: error.message }) }
+    if (search && search.trim()) {
+      const s = search.trim()
+      queryParams.set('or', `(title.ilike.*${s}*,description.ilike.*${s}*,url.ilike.*${s}*,notes.ilike.*${s}*)`)
     }
+
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/items?${queryParams}`, {
+      headers: supabaseHeaders(),
+    })
+
+    const data = await res.json()
+    if (!res.ok) return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify(data) }
 
     return { statusCode: 200, headers: corsHeaders(), body: JSON.stringify(data) }
   }
@@ -73,17 +74,27 @@ exports.handler = async (event) => {
       return { statusCode: 400, headers: corsHeaders(), body: JSON.stringify({ error: 'URL is required' }) }
     }
 
-    const { data, error } = await supabase
-      .from('items')
-      .insert([{ url, title, description, image_url, tags: tags || [], category: category || 'general', source: source || 'web', notes, favicon_url }])
-      .select()
-      .single()
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/items`, {
+      method: 'POST',
+      headers: supabaseHeaders(),
+      body: JSON.stringify({
+        url,
+        title: title || '',
+        description: description || '',
+        image_url: image_url || '',
+        favicon_url: favicon_url || '',
+        tags: tags || [],
+        category: category || 'general',
+        source: source || 'web',
+        notes: notes || '',
+      }),
+    })
 
-    if (error) {
-      return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify({ error: error.message }) }
-    }
+    const data = await res.json()
+    if (!res.ok) return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify(data) }
 
-    return { statusCode: 201, headers: corsHeaders(), body: JSON.stringify(data) }
+    const record = Array.isArray(data) ? data[0] : data
+    return { statusCode: 201, headers: corsHeaders(), body: JSON.stringify(record) }
   }
 
   return { statusCode: 405, headers: corsHeaders(), body: JSON.stringify({ error: 'Method not allowed' }) }

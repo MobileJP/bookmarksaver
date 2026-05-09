@@ -1,17 +1,20 @@
-const { createClient } = require('@supabase/supabase-js')
-
-function getSupabase() {
-  return createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_KEY
-  )
-}
+const SUPABASE_URL = process.env.SUPABASE_URL
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY
 
 function corsHeaders() {
   return {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Headers': 'Content-Type',
     'Content-Type': 'application/json',
+  }
+}
+
+function supabaseHeaders() {
+  return {
+    'apikey': SUPABASE_KEY,
+    'Authorization': `Bearer ${SUPABASE_KEY}`,
+    'Content-Type': 'application/json',
+    'Prefer': 'return=representation',
   }
 }
 
@@ -20,7 +23,6 @@ exports.handler = async (event) => {
     return { statusCode: 204, headers: corsHeaders(), body: '' }
   }
 
-  const supabase = getSupabase()
   const id = event.path.split('/').pop()
 
   if (!id) {
@@ -36,26 +38,29 @@ exports.handler = async (event) => {
       return { statusCode: 400, headers: corsHeaders(), body: JSON.stringify({ error: 'Invalid JSON' }) }
     }
 
-    const { data, error } = await supabase
-      .from('items')
-      .update({ ...body, updated_at: new Date().toISOString() })
-      .eq('id', id)
-      .select()
-      .single()
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/items?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: supabaseHeaders(),
+      body: JSON.stringify({ ...body, updated_at: new Date().toISOString() }),
+    })
 
-    if (error) {
-      return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify({ error: error.message }) }
-    }
+    const data = await res.json()
+    if (!res.ok) return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify(data) }
 
-    return { statusCode: 200, headers: corsHeaders(), body: JSON.stringify(data) }
+    const record = Array.isArray(data) ? data[0] : data
+    return { statusCode: 200, headers: corsHeaders(), body: JSON.stringify(record) }
   }
 
   // DELETE — remove item
   if (event.httpMethod === 'DELETE') {
-    const { error } = await supabase.from('items').delete().eq('id', id)
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/items?id=eq.${id}`, {
+      method: 'DELETE',
+      headers: supabaseHeaders(),
+    })
 
-    if (error) {
-      return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify({ error: error.message }) }
+    if (!res.ok) {
+      const data = await res.json()
+      return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify(data) }
     }
 
     return { statusCode: 204, headers: corsHeaders(), body: '' }
