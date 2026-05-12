@@ -7,6 +7,8 @@ export const CATEGORIES = [
   { id: 'cooking', label: 'Cooking', emoji: '🍳' },
   { id: 'religion', label: 'Religion', emoji: '🕌' },
   { id: 'jobs', label: 'Jobs', emoji: '💰' },
+  { id: 'ai', label: 'AI', emoji: '🤖' },
+  { id: 'manga', label: 'Manga', emoji: '📖' },
 ]
 
 export const SOURCE_LABELS = {

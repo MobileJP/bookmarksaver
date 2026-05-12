@@ -179,6 +179,11 @@ export default function App() {
         )}
       </main>
 
+      {/* Footer */}
+      <footer className="text-center py-6 text-xs text-gray-400 border-t border-gray-100 mt-8">
+        LinkVault v{__APP_VERSION__} &nbsp;·&nbsp; Released {__BUILD_DATE__}
+      </footer>
+
       {/* FAB on mobile */}
       <button
         onClick={() => { setEditItem(null); setShowModal(true) }}
