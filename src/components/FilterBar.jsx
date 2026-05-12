@@ -1,11 +1,8 @@
-import { useRef } from 'react'
 import { CATEGORIES } from '../constants'
 
 export default function FilterBar({ search, onSearch, category, onCategory, activeTags, onTagClick, allTags }) {
-  const tabsRef = useRef(null)
-
   return (
-    <div className="bg-white border-b border-gray-100 sticky top-[64px] z-30">
+    <div className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 sticky top-[64px] z-30">
       {/* Search */}
       <div className="px-4 pt-3 pb-2">
         <div className="relative">
@@ -17,40 +14,42 @@ export default function FilterBar({ search, onSearch, category, onCategory, acti
             value={search}
             onChange={(e) => onSearch(e.target.value)}
             placeholder="Search links..."
-            className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:bg-white"
+            className="w-full pl-9 pr-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:bg-white dark:focus:bg-gray-700"
           />
         </div>
       </div>
 
-      {/* Category tabs */}
-      <div ref={tabsRef} className="flex gap-1 px-4 pb-2 overflow-x-auto scrollbar-none">
-        {CATEGORIES.map((cat) => (
-          <button
-            key={cat.id}
-            onClick={() => onCategory(cat.id)}
-            className={`flex-none flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
-              category === cat.id
-                ? 'bg-primary-600 text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            <span>{cat.emoji}</span>
-            <span>{cat.label}</span>
-          </button>
-        ))}
+      {/* Category tabs — horizontal scroll on mobile */}
+      <div className="px-4 pb-2 overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
+        <div className="flex gap-1.5 w-max">
+          {CATEGORIES.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => onCategory(cat.id)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
+                category === cat.id
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+              }`}
+            >
+              <span>{cat.emoji}</span>
+              <span>{cat.label}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Active tag filters */}
+      {/* Tag filters — wrap on mobile so no horizontal scroll */}
       {allTags.length > 0 && (
-        <div className="flex gap-1.5 px-4 pb-2 overflow-x-auto scrollbar-none">
-          {allTags.slice(0, 20).map((tag) => (
+        <div className="px-4 pb-3 flex flex-wrap gap-1.5">
+          {allTags.slice(0, 30).map((tag) => (
             <button
               key={tag}
               onClick={() => onTagClick(tag)}
-              className={`flex-none text-xs px-2.5 py-1 rounded-full transition-colors ${
+              className={`text-xs px-2.5 py-1 rounded-full transition-colors ${
                 activeTags.includes(tag)
                   ? 'bg-indigo-600 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
               }`}
             >
               #{tag}

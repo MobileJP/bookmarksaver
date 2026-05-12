@@ -21,13 +21,10 @@ export default function AddItemModal({ initialUrl = '', initialTitle = '', exist
   const urlRef = useRef(null)
 
   useEffect(() => {
-    if (!existingItem && initialUrl) {
-      fetchMetadata(initialUrl)
-    }
+    if (!existingItem && initialUrl) fetchMetadata(initialUrl)
   }, [])
 
   useEffect(() => {
-    // Focus URL input on open (if adding new)
     if (!existingItem) urlRef.current?.focus()
   }, [])
 
@@ -54,9 +51,7 @@ export default function AddItemModal({ initialUrl = '', initialTitle = '', exist
 
   function addTag(raw) {
     const tag = raw.trim().toLowerCase().replace(/[^a-z0-9-_]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
-    if (tag && !tags.includes(tag)) {
-      setTags([...tags, tag])
-    }
+    if (tag && !tags.includes(tag)) setTags([...tags, tag])
     setTagInput('')
   }
 
@@ -73,9 +68,7 @@ export default function AddItemModal({ initialUrl = '', initialTitle = '', exist
     e.preventDefault()
     if (!url) return
     setSaving(true)
-
     const payload = { url, title, description, image_url: imageUrl, favicon_url: faviconUrl, source, category, notes, tags }
-
     try {
       let res
       if (existingItem) {
@@ -91,7 +84,6 @@ export default function AddItemModal({ initialUrl = '', initialTitle = '', exist
           body: JSON.stringify(payload),
         })
       }
-
       if (res.ok) {
         const saved = await res.json()
         onSave(saved, !!existingItem)
@@ -101,15 +93,18 @@ export default function AddItemModal({ initialUrl = '', initialTitle = '', exist
     }
   }
 
+  const inputCls = 'w-full px-3 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500'
+  const selectCls = `${inputCls} cursor-pointer`
+
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl shadow-2xl max-h-[95vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div className="bg-white dark:bg-gray-800 w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl shadow-2xl max-h-[95vh] overflow-y-auto">
         {/* Header */}
-        <div className="sticky top-0 bg-white flex items-center justify-between px-5 py-4 border-b border-gray-100 rounded-t-3xl sm:rounded-t-2xl z-10">
-          <h2 className="text-lg font-bold text-gray-900">
+        <div className="sticky top-0 bg-white dark:bg-gray-800 flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700 rounded-t-3xl sm:rounded-t-2xl z-10">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white">
             {existingItem ? 'Edit Link' : 'Save Link'}
           </h2>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl">
+          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -119,7 +114,7 @@ export default function AddItemModal({ initialUrl = '', initialTitle = '', exist
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           {/* URL */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">URL *</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">URL *</label>
             <div className="flex gap-2">
               <input
                 ref={urlRef}
@@ -128,7 +123,7 @@ export default function AddItemModal({ initialUrl = '', initialTitle = '', exist
                 onChange={(e) => setUrl(e.target.value)}
                 placeholder="https://..."
                 required
-                className="flex-1 px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className={`flex-1 ${inputCls}`}
               />
               <button
                 type="button"
@@ -146,56 +141,36 @@ export default function AddItemModal({ initialUrl = '', initialTitle = '', exist
           {/* Preview image */}
           {imageUrl && (
             <div className="relative">
-              <img src={imageUrl} alt="Preview" className="w-full h-36 object-cover rounded-xl bg-gray-100" onError={() => setImageUrl('')} />
+              <img src={imageUrl} alt="Preview" className="w-full h-36 object-cover rounded-xl bg-gray-100 dark:bg-gray-700" onError={() => setImageUrl('')} />
               <button type="button" onClick={() => setImageUrl('')} className="absolute top-2 right-2 bg-black/50 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs">✕</button>
             </div>
           )}
 
           {/* Title */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Link title"
-              className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-            />
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Title</label>
+            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Link title" className={inputCls} />
           </div>
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Brief description"
-              rows={2}
-              className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
-            />
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Brief description" rows={2} className={`${inputCls} resize-none`} />
           </div>
 
           {/* Category + Source */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white"
-              >
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
+              <select value={category} onChange={(e) => setCategory(e.target.value)} className={selectCls}>
                 {CATEGORY_OPTIONS.map((c) => (
                   <option key={c.id} value={c.id}>{c.emoji} {c.label}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Source</label>
-              <select
-                value={source}
-                onChange={(e) => setSource(e.target.value)}
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white"
-              >
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Source</label>
+              <select value={source} onChange={(e) => setSource(e.target.value)} className={selectCls}>
                 {Object.entries(SOURCE_LABELS).map(([key, val]) => (
                   <option key={key} value={key}>{val.label}</option>
                 ))}
@@ -205,10 +180,10 @@ export default function AddItemModal({ initialUrl = '', initialTitle = '', exist
 
           {/* Tags */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tags</label>
-            <div className="flex flex-wrap gap-1.5 p-2.5 border border-gray-200 rounded-xl min-h-[44px] focus-within:ring-2 focus-within:ring-primary-500">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tags</label>
+            <div className="flex flex-wrap gap-1.5 p-2.5 border border-gray-200 dark:border-gray-600 rounded-xl min-h-[44px] bg-white dark:bg-gray-700 focus-within:ring-2 focus-within:ring-primary-500">
               {tags.map((tag) => (
-                <span key={tag} className="inline-flex items-center gap-1 text-xs bg-primary-50 text-primary-700 px-2 py-1 rounded-full">
+                <span key={tag} className="inline-flex items-center gap-1 text-xs bg-primary-50 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 px-2 py-1 rounded-full">
                   #{tag}
                   <button type="button" onClick={() => setTags(tags.filter((t) => t !== tag))} className="hover:text-red-500">✕</button>
                 </span>
@@ -219,8 +194,8 @@ export default function AddItemModal({ initialUrl = '', initialTitle = '', exist
                 onChange={(e) => setTagInput(e.target.value)}
                 onKeyDown={handleTagKeyDown}
                 onBlur={() => tagInput && addTag(tagInput)}
-                placeholder={tags.length ? '' : 'fitness, recipe, job... (press Enter)'}
-                className="flex-1 min-w-[100px] text-sm outline-none bg-transparent"
+                placeholder={tags.length ? '' : 'fitness, recipe... (press Enter)'}
+                className="flex-1 min-w-[100px] text-sm outline-none bg-transparent text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
               />
             </div>
             <p className="text-xs text-gray-400 mt-1">Press Enter or comma to add a tag</p>
@@ -228,14 +203,8 @@ export default function AddItemModal({ initialUrl = '', initialTitle = '', exist
 
           {/* Notes */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Personal notes</label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Why you saved this, what to do with it..."
-              rows={2}
-              className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
-            />
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Personal notes</label>
+            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Why you saved this, what to do with it..." rows={2} className={`${inputCls} resize-none`} />
           </div>
 
           {/* Submit */}
