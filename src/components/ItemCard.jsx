@@ -1,13 +1,25 @@
 import { useState } from 'react'
 import { CATEGORY_MAP, SOURCE_LABELS } from '../constants'
 
-export default function ItemCard({ item, onDelete, onEdit }) {
+const PROGRESS_CATEGORIES = ['manga', 'anime']
+
+export default function ItemCard({ item, onDelete, onEdit, onProgressUpdate }) {
   const [imgError, setImgError] = useState(false)
+  const [editingProgress, setEditingProgress] = useState(false)
+  const [progressInput, setProgressInput] = useState(item.progress || '')
+
   const source = SOURCE_LABELS[item.source] || SOURCE_LABELS.web
   const category = CATEGORY_MAP[item.category]
+  const showProgress = PROGRESS_CATEGORIES.includes(item.category)
 
   function handleOpen() {
     window.open(item.url, '_blank', 'noopener,noreferrer')
+  }
+
+  function handleProgressSubmit(e) {
+    e.preventDefault()
+    onProgressUpdate(item, progressInput)
+    setEditingProgress(false)
   }
 
   return (
@@ -56,6 +68,41 @@ export default function ItemCard({ item, onDelete, onEdit }) {
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{item.description}</p>
         )}
 
+        {/* Progress tracker (manga / anime) */}
+        {showProgress && (
+          <div className="mt-2">
+            {editingProgress ? (
+              <form onSubmit={handleProgressSubmit} className="flex gap-1.5">
+                <input
+                  autoFocus
+                  type="text"
+                  value={progressInput}
+                  onChange={(e) => setProgressInput(e.target.value)}
+                  placeholder="e.g. Chapter 47"
+                  className="flex-1 text-xs px-2.5 py-1.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+                <button type="submit" className="text-xs bg-primary-600 text-white px-2.5 py-1.5 rounded-lg hover:bg-primary-700 transition-colors">
+                  Save
+                </button>
+                <button type="button" onClick={() => setEditingProgress(false)} className="text-xs text-gray-400 hover:text-gray-600 px-1.5">
+                  ✕
+                </button>
+              </form>
+            ) : (
+              <button
+                onClick={() => { setProgressInput(item.progress || ''); setEditingProgress(true) }}
+                className="flex items-center gap-1.5 text-xs bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 px-2.5 py-1.5 rounded-lg hover:bg-violet-100 dark:hover:bg-violet-900/50 transition-colors w-full text-left"
+              >
+                <span>📍</span>
+                <span>{item.progress || 'Set progress...'}</span>
+                <svg className="w-3 h-3 ml-auto flex-none opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Notes */}
         {item.notes && (
           <p className="text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 rounded-lg px-2 py-1 mt-2 line-clamp-2">
@@ -78,32 +125,19 @@ export default function ItemCard({ item, onDelete, onEdit }) {
         <div className="flex items-center justify-between mt-auto pt-3 border-t border-gray-50 dark:border-gray-700">
           <div className="flex items-center gap-1 min-w-0">
             {item.favicon_url && (
-              <img
-                src={item.favicon_url}
-                alt=""
-                className="w-4 h-4 rounded-sm flex-none"
-                onError={(e) => { e.target.style.display = 'none' }}
-              />
+              <img src={item.favicon_url} alt="" className="w-4 h-4 rounded-sm flex-none" onError={(e) => { e.target.style.display = 'none' }} />
             )}
             <span className="text-xs text-gray-400 dark:text-gray-500 truncate">
               {(() => { try { return new URL(item.url).hostname.replace('www.', '') } catch { return item.url } })()}
             </span>
           </div>
           <div className="flex items-center gap-1 flex-none">
-            <button
-              onClick={() => onEdit(item)}
-              className="p-1.5 text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg transition-colors"
-              title="Edit"
-            >
+            <button onClick={() => onEdit(item)} className="p-1.5 text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg transition-colors" title="Edit">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
               </svg>
             </button>
-            <button
-              onClick={() => onDelete(item.id)}
-              className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-              title="Delete"
-            >
+            <button onClick={() => onDelete(item.id)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors" title="Delete">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
               </svg>

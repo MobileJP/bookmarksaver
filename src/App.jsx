@@ -1,10 +1,9 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import PasswordGate from './components/PasswordGate'
+import { supabase } from './lib/supabase'
+import AuthGate from './components/AuthGate'
 import FilterBar from './components/FilterBar'
 import ItemCard from './components/ItemCard'
 import AddItemModal from './components/AddItemModal'
-
-const PASSWORD = import.meta.env.VITE_ACCESS_PASSWORD
 
 function useDarkMode() {
   const [dark, setDark] = useState(() => {
@@ -21,18 +20,6 @@ function useDarkMode() {
   return [dark, () => setDark((d) => !d)]
 }
 
-function useUnlocked() {
-  const [unlocked, setUnlocked] = useState(() => {
-    if (!PASSWORD) return true
-    return sessionStorage.getItem('lv_unlocked') === '1'
-  })
-  function unlock() {
-    sessionStorage.setItem('lv_unlocked', '1')
-    setUnlocked(true)
-  }
-  return [unlocked, unlock]
-}
-
 function getSharedContent() {
   const params = new URLSearchParams(window.location.search)
   const url = params.get('url') || params.get('text') || ''
@@ -45,7 +32,7 @@ function getSharedContent() {
 }
 
 function downloadCSV(items) {
-  const headers = ['URL', 'Title', 'Description', 'Category', 'Source', 'Tags', 'Notes', 'Date Saved']
+  const headers = ['URL', 'Title', 'Description', 'Category', 'Source', 'Tags', 'Progress', 'Notes', 'Date Saved']
   const escape = (v) => `"${(v || '').toString().replace(/"/g, '""')}"`
   const rows = items.map((item) => [
     escape(item.url),
@@ -54,6 +41,7 @@ function downloadCSV(items) {
     escape(item.category),
     escape(item.source),
     escape((item.tags || []).join('; ')),
+    escape(item.progress),
     escape(item.notes),
     escape(new Date(item.created_at).toLocaleDateString()),
   ])
@@ -69,7 +57,7 @@ function downloadCSV(items) {
 
 export default function App() {
   const [dark, toggleDark] = useDarkMode()
-  const [unlocked, unlock] = useUnlocked()
+  const [session, setSession] = useState(undefined) // undefined = loading
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(false)
   const [search, setSearch] = useState('')
@@ -79,29 +67,46 @@ export default function App() {
   const [editItem, setEditItem] = useState(null)
   const [sharedContent] = useState(() => getSharedContent())
 
+  // Auth state
   useEffect(() => {
-    if (unlocked && sharedContent) setShowModal(true)
-  }, [unlocked, sharedContent])
+    supabase.auth.getSession().then(({ data: { session } }) => setSession(session))
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+    })
+    return () => subscription.unsubscribe()
+  }, [])
+
+  useEffect(() => {
+    if (session && sharedContent) setShowModal(true)
+  }, [session, sharedContent])
+
+  function authHeaders() {
+    return {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${session.access_token}`,
+    }
+  }
 
   const fetchItems = useCallback(async () => {
+    if (!session) return
     setLoading(true)
     try {
       const params = new URLSearchParams()
       if (search) params.set('search', search)
       if (category !== 'all') params.set('category', category)
       if (activeTags.length) params.set('tags', activeTags.join(','))
-      const res = await fetch(`/api/items?${params}`)
+      const res = await fetch(`/api/items?${params}`, { headers: authHeaders() })
       if (res.ok) setItems(await res.json())
     } finally {
       setLoading(false)
     }
-  }, [search, category, activeTags])
+  }, [search, category, activeTags, session])
 
   useEffect(() => {
-    if (!unlocked) return
+    if (!session) return
     const id = setTimeout(fetchItems, search ? 300 : 0)
     return () => clearTimeout(id)
-  }, [fetchItems, unlocked])
+  }, [fetchItems, session])
 
   const allTags = useMemo(() => {
     const set = new Set()
@@ -125,7 +130,7 @@ export default function App() {
 
   async function handleDelete(id) {
     if (!window.confirm('Remove this link?')) return
-    await fetch(`/api/item/${id}`, { method: 'DELETE' })
+    await fetch(`/api/item/${id}`, { method: 'DELETE', headers: authHeaders() })
     setItems((prev) => prev.filter((i) => i.id !== id))
   }
 
@@ -134,14 +139,38 @@ export default function App() {
     setShowModal(true)
   }
 
-  if (!unlocked) return <PasswordGate onUnlock={unlock} />
+  async function handleProgressUpdate(item, progress) {
+    const res = await fetch(`/api/item/${item.id}`, {
+      method: 'PUT',
+      headers: authHeaders(),
+      body: JSON.stringify({ progress }),
+    })
+    if (res.ok) {
+      const updated = await res.json()
+      setItems((prev) => prev.map((i) => i.id === updated.id ? updated : i))
+    }
+  }
+
+  async function signOut() {
+    await supabase.auth.signOut()
+  }
+
+  // Loading auth state
+  if (session === undefined) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
+        <div className="text-4xl animate-pulse">🔗</div>
+      </div>
+    )
+  }
+
+  if (!session) return <AuthGate />
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 shadow-sm">
         <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between gap-3">
-          {/* Logo */}
           <div className="flex items-center gap-2 min-w-0">
             <span className="text-xl">🔗</span>
             <span className="font-bold text-gray-900 dark:text-white text-lg">LinkVault</span>
@@ -150,13 +179,12 @@ export default function App() {
             )}
           </div>
 
-          {/* Actions */}
           <div className="flex items-center gap-2">
             {/* CSV download */}
             <button
               onClick={() => downloadCSV(items)}
               disabled={items.length === 0}
-              title="Download all links as CSV"
+              title="Download as CSV"
               className="p-2 text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -167,7 +195,7 @@ export default function App() {
             {/* Dark mode toggle */}
             <button
               onClick={toggleDark}
-              title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+              title={dark ? 'Light mode' : 'Dark mode'}
               className="p-2 text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors"
             >
               {dark ? (
@@ -180,6 +208,25 @@ export default function App() {
                 </svg>
               )}
             </button>
+
+            {/* User avatar + sign out */}
+            <div className="relative group">
+              <button className="w-8 h-8 rounded-full overflow-hidden bg-primary-100 dark:bg-primary-900 flex items-center justify-center">
+                {session.user.user_metadata?.avatar_url ? (
+                  <img src={session.user.user_metadata.avatar_url} alt="You" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-xs font-bold text-primary-700 dark:text-primary-300">
+                    {session.user.email?.[0]?.toUpperCase()}
+                  </span>
+                )}
+              </button>
+              <div className="absolute right-0 top-10 hidden group-hover:block bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-lg p-1 min-w-[140px] z-50">
+                <p className="text-xs text-gray-500 dark:text-gray-400 px-3 py-1.5 truncate max-w-[160px]">{session.user.email}</p>
+                <button onClick={signOut} className="w-full text-left text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 px-3 py-1.5 rounded-lg transition-colors">
+                  Sign out
+                </button>
+              </div>
+            </div>
 
             {/* Save link */}
             <button
@@ -237,7 +284,13 @@ export default function App() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {items.map((item) => (
-              <ItemCard key={item.id} item={item} onDelete={handleDelete} onEdit={handleEdit} />
+              <ItemCard
+                key={item.id}
+                item={item}
+                onDelete={handleDelete}
+                onEdit={handleEdit}
+                onProgressUpdate={handleProgressUpdate}
+              />
             ))}
           </div>
         )}
@@ -256,7 +309,6 @@ export default function App() {
         +
       </button>
 
-      {/* Modal */}
       {showModal && (
         <AddItemModal
           initialUrl={!editItem ? (sharedContent?.url || '') : ''}
@@ -264,6 +316,7 @@ export default function App() {
           existingItem={editItem}
           onSave={handleSaved}
           onClose={() => { setShowModal(false); setEditItem(null) }}
+          accessToken={session.access_token}
         />
       )}
     </div>

@@ -12,6 +12,7 @@ export default function AddItemModal({ initialUrl = '', initialTitle = '', exist
   const [source, setSource] = useState(existingItem?.source || 'web')
   const [category, setCategory] = useState(existingItem?.category || 'general')
   const [notes, setNotes] = useState(existingItem?.notes || '')
+  const [progress, setProgress] = useState(existingItem?.progress || '')
   const [tagInput, setTagInput] = useState('')
   const [tags, setTags] = useState(existingItem?.tags || [])
   const [fetching, setFetching] = useState(false)
@@ -68,7 +69,7 @@ export default function AddItemModal({ initialUrl = '', initialTitle = '', exist
     e.preventDefault()
     if (!url) return
     setSaving(true)
-    const payload = { url, title, description, image_url: imageUrl, favicon_url: faviconUrl, source, category, notes, tags }
+    const payload = { url, title, description, image_url: imageUrl, favicon_url: faviconUrl, source, category, notes, tags, progress }
     try {
       let res
       if (existingItem) {
@@ -200,6 +201,22 @@ export default function AddItemModal({ initialUrl = '', initialTitle = '', exist
             </div>
             <p className="text-xs text-gray-400 mt-1">Press Enter or comma to add a tag</p>
           </div>
+
+          {/* Progress (manga / anime) */}
+          {(category === 'manga' || category === 'anime') && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                📍 Progress
+              </label>
+              <input
+                type="text"
+                value={progress}
+                onChange={(e) => setProgress(e.target.value)}
+                placeholder={category === 'manga' ? 'e.g. Chapter 47' : 'e.g. Episode 12 Season 2'}
+                className={inputCls}
+              />
+            </div>
+          )}
 
           {/* Notes */}
           <div>
