@@ -63,6 +63,7 @@ export default function App() {
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('all')
   const [activeTags, setActiveTags] = useState([])
+  const [sort, setSort] = useState('newest')
   const [showModal, setShowModal] = useState(false)
   const [editItem, setEditItem] = useState(null)
   const [sharedContent] = useState(() => getSharedContent())
@@ -95,12 +96,13 @@ export default function App() {
       if (search) params.set('search', search)
       if (category !== 'all') params.set('category', category)
       if (activeTags.length) params.set('tags', activeTags.join(','))
+      params.set('sort', sort)
       const res = await fetch(`/api/items?${params}`, { headers: authHeaders() })
       if (res.ok) setItems(await res.json())
     } finally {
       setLoading(false)
     }
-  }, [search, category, activeTags, session])
+  }, [search, category, activeTags, sort, session])
 
   useEffect(() => {
     if (!session) return
@@ -137,6 +139,18 @@ export default function App() {
   function handleEdit(item) {
     setEditItem(item)
     setShowModal(true)
+  }
+
+  async function handlePinToggle(item) {
+    const res = await fetch(`/api/item/${item.id}`, {
+      method: 'PUT',
+      headers: authHeaders(),
+      body: JSON.stringify({ pinned: !item.pinned }),
+    })
+    if (res.ok) {
+      const updated = await res.json()
+      setItems((prev) => prev.map((i) => i.id === updated.id ? updated : i))
+    }
   }
 
   async function handleProgressUpdate(item, progress) {
@@ -251,6 +265,8 @@ export default function App() {
         activeTags={activeTags}
         onTagClick={toggleTag}
         allTags={allTags}
+        sort={sort}
+        onSort={setSort}
       />
 
       {/* Content */}
@@ -290,6 +306,7 @@ export default function App() {
                 onDelete={handleDelete}
                 onEdit={handleEdit}
                 onProgressUpdate={handleProgressUpdate}
+                onPinToggle={handlePinToggle}
               />
             ))}
           </div>
@@ -314,6 +331,7 @@ export default function App() {
           initialUrl={!editItem ? (sharedContent?.url || '') : ''}
           initialTitle={!editItem ? (sharedContent?.title || '') : ''}
           existingItem={editItem}
+          existingUrls={new Set(items.map((i) => i.url))}
           onSave={handleSaved}
           onClose={() => { setShowModal(false); setEditItem(null) }}
           accessToken={session.access_token}

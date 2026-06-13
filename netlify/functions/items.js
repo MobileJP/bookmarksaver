@@ -41,10 +41,16 @@ exports.handler = async (event) => {
   // GET — list/search items
   if (event.httpMethod === 'GET') {
     const params = event.queryStringParameters || {}
-    const { search, tags, category, limit = '50', offset = '0' } = params
+    const { search, tags, category, sort = 'newest', limit = '50', offset = '0' } = params
+
+    const orderMap = {
+      newest: 'pinned.desc,created_at.desc',
+      oldest: 'pinned.desc,created_at.asc',
+      alpha:  'pinned.desc,title.asc',
+    }
 
     const q = new URLSearchParams()
-    q.set('order', 'created_at.desc')
+    q.set('order', orderMap[sort] || orderMap.newest)
     q.set('limit', limit)
     q.set('offset', offset)
 

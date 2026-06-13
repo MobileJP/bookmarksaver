@@ -3,7 +3,7 @@ import { CATEGORIES, SOURCE_LABELS } from '../constants'
 
 const CATEGORY_OPTIONS = CATEGORIES.filter((c) => c.id !== 'all')
 
-export default function AddItemModal({ initialUrl = '', initialTitle = '', existingItem = null, onSave, onClose }) {
+export default function AddItemModal({ initialUrl = '', initialTitle = '', existingItem = null, existingUrls = new Set(), onSave, onClose }) {
   const [url, setUrl] = useState(existingItem?.url || initialUrl)
   const [title, setTitle] = useState(existingItem?.title || initialTitle)
   const [description, setDescription] = useState(existingItem?.description || '')
@@ -137,6 +137,11 @@ export default function AddItemModal({ initialUrl = '', initialTitle = '', exist
             </div>
             {fetchError && <p className="text-amber-600 text-xs mt-1">{fetchError}</p>}
             {fetching && <p className="text-gray-400 text-xs mt-1">Fetching link details...</p>}
+            {!existingItem && url && existingUrls.has(url) && (
+              <p className="text-amber-600 dark:text-amber-400 text-xs mt-1 bg-amber-50 dark:bg-amber-900/30 px-3 py-2 rounded-lg">
+                ⚠️ You've already saved this link. You can still save it again with different tags or notes.
+              </p>
+            )}
           </div>
 
           {/* Preview image */}

@@ -1,11 +1,17 @@
 import { CATEGORIES } from '../constants'
 
-export default function FilterBar({ search, onSearch, category, onCategory, activeTags, onTagClick, allTags }) {
+const SORT_OPTIONS = [
+  { id: 'newest', label: 'Newest first' },
+  { id: 'oldest', label: 'Oldest first' },
+  { id: 'alpha', label: 'A → Z' },
+]
+
+export default function FilterBar({ search, onSearch, category, onCategory, activeTags, onTagClick, allTags, sort, onSort }) {
   return (
     <div className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 sticky top-[64px] z-30">
-      {/* Search */}
-      <div className="px-4 pt-3 pb-2">
-        <div className="relative">
+      {/* Search + Sort row */}
+      <div className="px-4 pt-3 pb-2 flex gap-2">
+        <div className="relative flex-1">
           <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
@@ -17,9 +23,20 @@ export default function FilterBar({ search, onSearch, category, onCategory, acti
             className="w-full pl-9 pr-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:bg-white dark:focus:bg-gray-700"
           />
         </div>
+
+        {/* Sort dropdown */}
+        <select
+          value={sort}
+          onChange={(e) => onSort(e.target.value)}
+          className="px-3 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500 cursor-pointer"
+        >
+          {SORT_OPTIONS.map((o) => (
+            <option key={o.id} value={o.id}>{o.label}</option>
+          ))}
+        </select>
       </div>
 
-      {/* Category tabs — horizontal scroll on mobile */}
+      {/* Category tabs */}
       <div className="px-4 pb-2 overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
         <div className="flex gap-1.5 w-max">
           {CATEGORIES.map((cat) => (
@@ -39,7 +56,7 @@ export default function FilterBar({ search, onSearch, category, onCategory, acti
         </div>
       </div>
 
-      {/* Tag filters — wrap on mobile so no horizontal scroll */}
+      {/* Tag filters */}
       {allTags.length > 0 && (
         <div className="px-4 pb-3 flex flex-wrap gap-1.5">
           {allTags.slice(0, 30).map((tag) => (
