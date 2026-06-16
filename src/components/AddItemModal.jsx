@@ -3,7 +3,7 @@ import { CATEGORIES, SOURCE_LABELS } from '../constants'
 
 const CATEGORY_OPTIONS = CATEGORIES.filter((c) => c.id !== 'all')
 
-export default function AddItemModal({ initialUrl = '', initialTitle = '', existingItem = null, existingUrls = new Set(), onSave, onClose }) {
+export default function AddItemModal({ initialUrl = '', initialTitle = '', existingItem = null, existingUrls = new Set(), onSave, onClose, accessToken }) {
   const [url, setUrl] = useState(existingItem?.url || initialUrl)
   const [title, setTitle] = useState(existingItem?.title || initialTitle)
   const [description, setDescription] = useState(existingItem?.description || '')
@@ -72,16 +72,20 @@ export default function AddItemModal({ initialUrl = '', initialTitle = '', exist
     const payload = { url, title, description, image_url: imageUrl, favicon_url: faviconUrl, source, category, notes, tags, progress }
     try {
       let res
+      const authHeaders = {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      }
       if (existingItem) {
         res = await fetch(`/api/item/${existingItem.id}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders,
           body: JSON.stringify(payload),
         })
       } else {
         res = await fetch('/api/items', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders,
           body: JSON.stringify(payload),
         })
       }
